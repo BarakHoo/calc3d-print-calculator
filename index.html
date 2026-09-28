@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>מחשבון עלויות הדפסה תלת מימד</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161922;
+    --surface2: #1e2330;
+    --surface3: #252b3a;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #7c5cbf;
+    --text: #e8eaf0;
+    --text-muted: #7a82a0;
+    --border: #2a3148;
+    --success: #00e676;
+    --warning: #ffb300;
+    --error: #ff5252;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px;
+    right: -200px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -200px;
+    left: -200px;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(124,92,191,0.07) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    max-width: 540px;
+    margin: 0 auto;
+    padding: 16px;
+    position: relative;
+    z-index: 1;
+    padding-bottom: 40px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    padding: 28px 16px 20px;
+    margin-bottom: 8px;
+  }
+  .header-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+    display: block;
+    filter: drop-shadow(0 0 20px rgba(0,212,255,0.4));
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 5px;
+    margin-bottom: 18px;
+    gap: 4px;
+    border: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Heebo', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .tab .tab-icon { font-size: 18px; }
+  .tab.active {
+    background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(124,92,191,0.15));
+    color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.25);
+  }
+
+  /* SECTION */
+  .section {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-bottom: 14px;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 18px 14px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .section-header .section-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .icon-material { background: linear-gradient(135deg, #ff6b35, #ff3d00); }
+  .icon-printer  { background: linear-gradient(135deg, #00d4ff, #0080ff); }
+  .icon-electric { background: linear-gradient(135deg, #ffb300, #ff6f00); }
+  .icon-labor    { background: linear-gradient(135deg, #00e676, #00897b); }
+  .icon-overhead { background: linear-gradient(135deg, #7c5cbf, #4a1fc8); }
+  .icon-profit   { background: linear-gradient(135deg, #f06292, #ad1457); }
+
+  .section-title { font-size: 15px; font-weight: 700; color: var(--text); }
+  .section-sub   { font-size: 11px; color: var(--text-muted); }
+  .section-chevron {
+    margin-right: auto;
+    margin-left: 0;
+    color: var(--text-muted);
+    transition: transform 0.3s;
+    font-size: 18px;
+  }
+  .section.collapsed .section-chevron { transform: rotate(-90deg); }
+  .section-body {
+    padding: 0 18px 18px;
+    display: grid;
+    gap: 12px;
+  }
+  .section.collapsed .section-body { display: none; }
+
+  /* MATERIAL SELECTOR */
+  .material-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .mat-btn {
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    color: var(--text-muted);
+    font-family: 'Heebo', sans-serif;
+  }
+  .mat-btn .mat-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+  .mat-btn .mat-name { font-size: 12px; font-weight: 600; display: block; }
+  .mat-btn .mat-price { font-size: 10px; display: block; margin-top: 2px; color: var(--text-muted); }
+  .mat-btn.selected {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.08);
+    color: var(--accent);
+  }
+  .mat-btn.selected .mat-price { color: var(--accent); opacity: 0.7; }
+
+  /* FIELDS */
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  input[type="number"], input[type="text"], select {
+    width: 100%;
+    background: var(--surface3);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'Heebo', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type="number"]:focus, input[type="text"]:focus, select:focus {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.04);
+  }
+  .unit {
+    position: absolute;
+    left: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+  input.with-unit { padding-left: 42px; }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a82a0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 12px center;
+    padding-left: 34px;
+  }
+
+  /* SLIDER */
+  .slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .slider-wrap input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--surface3);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    outline: none;
+  }
+  .slider-wrap input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0,212,255,0.5);
+  }
+  .slider-val {
+    min-width: 44px;
+    text-align: center;
+    background: var(--surface3);
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    border: 1px solid var(--border);
+  }
+
+  /* TOGGLE */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+  }
+  .toggle-label { font-size: 13px; color: var(--text); font-weight: 500; }
+  .toggle-sub { font-size: 11px; color: var(--text-muted); }
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--surface3);
+    border-radius: 24px;
+    cursor: pointer;
+    transition: 0.3s;
+    border: 1px solid var(--border);
+  }
+  .toggle-slider::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    top: 2px;
+    right: 2px;
+    transition: 0.3s;
+  }
+  .toggle input:checked + .toggle-slider { background: rgba(0,212,255,0.2); border-color: var(--accent); }
+  .toggle input:checked + .toggle-slider::after { transform: translateX(-20px); background: var(--accent); }
+
+  /* COLOR CHANGES */
+  .color-count-btns {
+    display: flex;
+    gap: 8px;
+  }
+  .color-count-btn {
+    flex: 1;
+    padding: 12px 6px;
+    background: var(--surface3);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-family: 'Heebo', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .color-count-btn .cc-num { font-size: 20px; font-weight: 900; }
+  .color-count-btn .cc-label { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; }
+  .color-count-btn.active {
+    border-color: var(--accent2);
+    background: rgba(255,107,53,0.1);
+    color: var(--accent2);
+  }
+  .color-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.2);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+  .color-swatch:hover { transform: scale(1.1); }
+  .color-input-box {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface3);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+  }
+  .color-input-box input[type="color"] {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 50%;
+  }
+  .color-input-box .color-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+  }
+  .color-change-tag {
+    font-size: 11px;
+    color: var(--accent2);
+    background: rgba(255,107,53,0.1);
+    border: 1px solid rgba(255,107,53,0.2);
+    border-radius: 20px;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+  .color-cost-box {
+    background: rgba(0,212,255,0.05);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .color-cost-box .cc-title { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .color-cost-box .cc-val { font-size: 16px; font-weight: 800; color: var(--accent); }
+
+  /* RESULT PANEL */
+  .result-panel {
+    background: linear-gradient(135deg, #0d1a24, #141020);
+    border-radius: var(--radius);
+    border: 1.5px solid rgba(0,212,255,0.2);
+    margin-bottom: 14px;
+    overflow: hidden;
+    position: sticky;
+    bottom: 16px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.05);
+    display: none;
+  }
+  .result-panel.visible { display: block; }
+  .result-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    line-height: 1;
+    transition: color 0.2s, background 0.2s;
+  }
+  .result-close:hover { color: var(--text); background: rgba(255,255,255,0.07); }
+  .calc-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--accent), #0080ff);
+    border: none;
+    border-radius: var(--radius);
+    color: #000;
+    font-family: 'Heebo', sans-serif;
+    font-size: 17px;
+    font-weight: 800;
+    cursor: pointer;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 24px rgba(0,212,255,0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .calc-btn:active { transform: scale(0.98); box-shadow: 0 2px 12px rgba(0,212,255,0.2); }
+  .result-header {
+    background: linear-gradient(135deg, rgba(0,212,255,0.1), rgba(124,92,191,0.1));
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .result-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .result-currency { font-size: 12px; color: var(--text-muted); }
+
+  .result-main {
+    padding: 20px;
+    text-align: center;
+  }
+  .result-price {
+    font-size: 52px;
+    font-weight: 900;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -2px;
+  }
+  .result-price .currency-sym { font-size: 28px; letter-spacing: 0; }
+  .result-per { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  .result-breakdown {
+    padding: 0 20px 20px;
+    display: grid;
+    gap: 8px;
+  }
+  .breakdown-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .breakdown-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .breakdown-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .breakdown-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .breakdown-pct {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-right: 6px;
+  }
+
+  .result-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0 20px 14px;
+  }
+
+  .result-actions {
+    padding: 0 20px 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .btn {
+    padding: 13px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Heebo', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #0080ff);
+    color: #000;
+    box-shadow: 0 4px 20px rgba(0,212,255,0.25);
+  }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-secondary {
+    background: var(--surface3);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  /* PRESETS */
+  .preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .preset-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    cursor: pointer;
+    color: var(--text);
+    font-family: 'Heebo', sans-serif;
+    transition: all 0.2s;
+    text-align: right;
+  }
+  .preset-btn:hover { border-color: var(--accent); background: rgba(0,212,255,0.05); }
+  .preset-btn .preset-name { font-size: 13px; font-weight: 700; display: block; }
+  .preset-btn .preset-detail { font-size: 11px; color: var(--text-muted); display: block; margin-top: 2px; }
+
+  /* TAB PAGES */
+  .tab-page { display: none; animation: fadeIn 0.3s ease; }
+  .tab-page.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* BADGE */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(0,212,255,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.2);
+  }
+
+  /* HISTORY */
+  .history-item {
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .history-item:hover { border-color: var(--accent3); }
+  .history-icon { font-size: 28px; }
+  .history-info { flex: 1 }
+  .history-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .history-meta { font-size: 11px; color: var(--text-muted); }
+  .history-price { font-size: 18px; font-weight: 900; color: var(--accent); }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* CHART */
+  .pie-chart-wrap { display: flex; align-items: center; gap: 16px; padding: 10px 0; }
+  .pie-chart-legend { flex: 1; display: grid; gap: 8px; }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-val { font-weight: 700; color: var(--text); margin-right: auto; }
+
+  /* RESPONSIVE TWEAKS */
+  @media (max-width: 380px) {
+    .material-grid { grid-template-columns: repeat(3, 1fr); }
+    .result-price { font-size: 44px; }
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--success);
+    color: #000;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 700;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  canvas { max-width: 120px; max-height: 120px; }
+
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <span class="header-icon">🖨️</span>
+    <h1>מחשבון הדפסה תלת מימד</h1>
+    <p>חישוב מלא של עלויות הייצור</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('calc')">
+      <span class="tab-icon">🧮</span>חישוב
+    </button>
+    <button class="tab" onclick="switchTab('results')">
+      <span class="tab-icon">📊</span>תוצאות
+    </button>
+    <button class="tab" onclick="switchTab('history')">
+      <span class="tab-icon">📋</span>היסטוריה
+    </button>
+  </div>
+
+  <!-- CALC TAB -->
+  <div id="tab-calc" class="tab-page active">
+
+    <!-- PRESETS -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">פרויקטים מהירים</div>
+      <div class="preset-grid">
+        <button class="preset-btn" onclick="loadPreset('small')">
+          <span class="preset-name">🔩 חלק קטן</span>
+          <span class="preset-detail">~50 גרם • 3 שעות</span>
+        </button>
+        <button class="preset-btn" onclick="loadPreset('medium')">
+          <span class="preset-name">📦 פריט בינוני</span>
+          <span class="preset-detail">~150 גרם • 8 שעות</span>
+        </button>
+        <button class="preset-btn" onclick="loadPreset('large')">
+          <span class="preset-name">🏗️ פריט גדול</span>
+          <span class="preset-detail">~400 גרם • 20 שעות</span>
+        </button>
+        <button class="preset-btn" onclick="loadPreset('proto')">
+          <span class="preset-name">🔬 פרוטוטייפ</span>
+          <span class="preset-detail">~80 גרם • 5 שעות</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- MATERIAL -->
+    <div class="section" id="sec-material">
+      <div class="section-header" onclick="toggleSection('material')">
+        <div class="section-icon icon-material">🧱</div>
+        <div>
+          <div class="section-title">חומר הדפסה</div>
+          <div class="section-sub" id="mat-summary">בחר חומר</div>
+        </div>
+        <span class="section-chevron">›</span>
+      </div>
+      <div class="section-body">
+        <div class="material-grid">
+          <button class="mat-btn selected" onclick="selectMaterial('PLA')" id="mat-PLA">
+            <span class="mat-icon">🟢</span>
+            <span class="mat-name">PLA</span>
+            <span class="mat-price">₪80/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('ABS')" id="mat-ABS">
+            <span class="mat-icon">🟠</span>
+            <span class="mat-name">ABS</span>
+            <span class="mat-price">₪80/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('PETG')" id="mat-PETG">
+            <span class="mat-icon">🔵</span>
+            <span class="mat-name">PETG</span>
+            <span class="mat-price">₪90/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('TPU')" id="mat-TPU">
+            <span class="mat-icon">🌊</span>
+            <span class="mat-name">TPU</span>
+            <span class="mat-price">₪120/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('Nylon')" id="mat-Nylon">
+            <span class="mat-icon">⚪</span>
+            <span class="mat-name">Nylon</span>
+            <span class="mat-price">₪140/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('Resin')" id="mat-Resin">
+            <span class="mat-icon">🟣</span>
+            <span class="mat-name">שרף</span>
+            <span class="mat-price">₪120/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('PEBA')" id="mat-PEBA">
+            <span class="mat-icon">⚡</span>
+            <span class="mat-name">PEBA</span>
+            <span class="mat-price">₪180/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('ASA')" id="mat-ASA">
+            <span class="mat-icon">☀️</span>
+            <span class="mat-name">ASA</span>
+            <span class="mat-price">₪100/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('PVA')" id="mat-PVA">
+            <span class="mat-icon">💧</span>
+            <span class="mat-name">PVA</span>
+            <span class="mat-price">₪95/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('PA CF')" id="mat-PA CF">
+            <span class="mat-icon">✨</span>
+            <span class="mat-name">PA CF</span>
+            <span class="mat-price">₪150/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('Wood')" id="mat-Wood">
+            <span class="mat-icon">🪵</span>
+            <span class="mat-name">Wood</span>
+            <span class="mat-price">₪110/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('PC')" id="mat-PC">
+            <span class="mat-icon">🛡️</span>
+            <span class="mat-name">PC</span>
+            <span class="mat-price">₪140/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('Conductive')" id="mat-Conductive">
+            <span class="mat-icon">🔌</span>
+            <span class="mat-name">Conductive</span>
+            <span class="mat-price">₪200/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('Metal Fill')" id="mat-Metal Fill">
+            <span class="mat-icon">⚙️</span>
+            <span class="mat-name">Metal Fill</span>
+            <span class="mat-price">₪160/ק"ג</span>
+          </button>
+          <button class="mat-btn" onclick="selectMaterial('ESD-Safe')" id="mat-ESD-Safe">
+            <span class="mat-icon">🔷</span>
+            <span class="mat-name">ESD-Safe</span>
+            <span class="mat-price">₪175/ק"ג</span>
+          </button>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>עלות ק"ג (₪)</label>
+            <div class="input-wrap">
+              <input type="number" id="materialCost" value="80" min="1" oninput="calc()">
+            </div>
+          </div>
+          <div class="field">
+            <label>משקל הדפסה (גרם)</label>
+            <div class="input-wrap">
+              <input type="number" id="printWeight" value="100" min="1" oninput="calc()">
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>פסולת ותמיכות (%)</label>
+          <div class="slider-wrap">
+            <input type="range" id="wasteSlider" min="0" max="50" value="10" oninput="updateSlider(this,'wasteVal','%');calc()">
+            <div class="slider-val" id="wasteVal">10%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLORS -->
+    <div class="section" id="sec-colors">
+      <div class="section-header" onclick="toggleSection('colors')">
+        <div class="section-icon" style="background:linear-gradient(135deg,#e91e63,#9c27b0)">🎨</div>
+        <div>
+          <div class="section-title">הדפסה רב-צבעית</div>
+          <div class="section-sub" id="color-summary">צבע אחד (ברירת מחדל)</div>
+        </div>
+        <span class="section-chevron">›</span>
+      </div>
+      <div class="section-body">
+        <div>
+          <label style="display:block;margin-bottom:8px">מספר צבעים בהדפסה</label>
+          <div class="color-count-btns">
+            <button class="color-count-btn active" onclick="setColorCount(1)" id="cc-1">
+              <span class="cc-num">1</span>
+              <span class="cc-label">צבע</span>
+            </button>
+            <button class="color-count-btn" onclick="setColorCount(2)" id="cc-2">
+              <span class="cc-num">2</span>
+              <span class="cc-label">צבעים</span>
+            </button>
+            <button class="color-count-btn" onclick="setColorCount(3)" id="cc-3">
+              <span class="cc-num">3</span>
+              <span class="cc-label">צבעים</span>
+            </button>
+            <button class="color-count-btn" onclick="setColorCount(4)" id="cc-4">
+              <span class="cc-num">4</span>
+              <span class="cc-label">צבעים</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="colorRowsWrap" style="display:flex;flex-direction:column;gap:8px"></div>
+
+        <div class="color-cost-box" id="colorCostBox" style="display:none">
+          <div>
+            <div class="cc-title">עלות החלפות צבע</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px" id="colorCostDetail"></div>
+          </div>
+          <div class="cc-val" id="colorCostVal">₪0</div>
+        </div>
+
+        <div style="font-size:11px;color:var(--text-muted);padding:4px 2px;line-height:1.6">
+          💡 כל החלפת צבע = 2 דק' עבודה + ₪4 כיול מדפסת
+        </div>
+      </div>
+    </div>
+
+    <!-- PRINTER -->
+    <div class="section" id="sec-printer">
+      <div class="section-header" onclick="toggleSection('printer')">
+        <div class="section-icon icon-printer">⚙️</div>
+        <div>
+          <div class="section-title">פרמטרי מדפסת</div>
+          <div class="section-sub">זמן הדפסה ובלאי ציוד</div>
+        </div>
+        <span class="section-chevron">›</span>
+      </div>
+      <div class="section-body">
+        <div class="field-row">
+          <div class="field">
+            <label>זמן הדפסה (שעות)</label>
+            <input type="number" id="printHours" value="5" min="0.1" step="0.5" oninput="calc()">
+          </div>
+          <div class="field">
+            <label>עלות מדפסת (₪)</label>
+            <input type="number" id="printerCost" value="3000" min="0" oninput="calc()">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>אורך חיים (שנים)</label>
+            <input type="number" id="printerLife" value="5" min="1" oninput="calc()">
+          </div>
+          <div class="field">
+            <label>שעות שימוש/שנה</label>
+            <input type="number" id="printerHoursYear" value="1000" min="1" oninput="calc()">
+          </div>
+        </div>
+        <div class="field">
+          <label>תחזוקה ורכיבים (₪/שנה)</label>
+          <input type="number" id="maintenance" value="500" min="0" oninput="calc()">
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">כולל הכנת קבצים</div>
+            <div class="toggle-sub">Slicing + הגדרות הדפסה</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="includePrep" checked onchange="calc()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="field" id="prepTimeWrap">
+          <label>זמן הכנה (דקות)</label>
+          <input type="number" id="prepMinutes" value="30" min="0" oninput="calc()">
+        </div>
+      </div>
+    </div>
+
+    <!-- ELECTRICITY -->
+    <div class="section" id="sec-electric">
+      <div class="section-header" onclick="toggleSection('electric')">
+        <div class="section-icon icon-electric">⚡</div>
+        <div>
+          <div class="section-title">חשמל</div>
+          <div class="section-sub">צריכת חשמל להדפסה</div>
+        </div>
+        <span class="section-chevron">›</span>
+      </div>
+      <div class="section-body">
+        <div class="field-row">
+          <div class="field">
+            <label>צריכה (וואט)</label>
+            <input type="number" id="wattage" value="200" min="1" oninput="calc()">
+          </div>
+          <div class="field">
+            <label>מחיר קוט"ש (₪)</label>
+            <input type="number" id="electricRate" value="0.65" min="0.01" step="0.01" oninput="calc()">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LABOR -->
+    <div class="section" id="sec-labor">
+      <div class="section-header" onclick="toggleSection('labor')">
+        <div class="section-icon icon-labor">👷</div>
+        <div>
+          <div class="section-title">כוח אדם</div>
+          <div class="section-sub">עלות עבודה ועיבוד לאחר הדפסה</div>
+        </div>
+        <span class="section-chevron">›</span>
+      </div>
+      <div class="section-body">
+        <div class="field-row">
+          <div class="field">
+            <label>שכר שעתי (₪)</label>
+            <input type="number" id="hourlyRate" value="80" min="0" oninput="calc()">
+          </div>
+          <div class="field">
+            <label>פיקוח (דקות)</label>
+            <input type="number" id="supervisionMin" value="20" min="0" oninput="calc()">
+          </div>
+        </div>
+        <div class="field">
+          <label>עיבוד לאחר הדפסה (דקות)</label>
+          <div class="slider-wrap">
+            <input type="range" id="postProcessSlider" min="0" max="120" value="15" oninput="updateSlider(this,'postProcessVal',' דק');calc()">
+            <div class="slider-val" id="postProcessVal">15 דק</div>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">צביעה וגימור</div>
+            <div class="toggle-sub">ספריי, שמירה, ציפוי</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="includePainting" onchange="calc()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="field" id="paintingCostWrap" style="display:none">
+          <label>עלות חומרי גימור (₪)</label>
+          <input type="number" id="paintingCost" value="20" min="0" oninput="calc()">
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERHEAD -->
+    <div class="section" id="sec-overhead">
+      <div class="section-header" onclick="toggleSection('overhead')">
+        <div class="section-icon icon-overhead">🏠</div>
+        <div>
+          <div class="section-title">עלויות תקורה</div>
+          <div class="section-sub">שטח, ביטוח, ציוד עזר</div>
+        </div>
+        <span class="section-chevron">›</span>
+      </div>
+      <div class="section-body">
+        <div class="field-row">
+          <div class="field">
+            <label>שכ"ד חודשי (₪)</label>
+            <input type="number" id="rent" value="0" min="0" oninput="calc()">
+          </div>
+          <div class="field">
+            <label>ביטוח חודשי (₪)</label>
+            <input type="number" id="insurance" value="0" min="0" oninput="calc()">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>שעות הפעלה/חודש</label>
+            <input type="number" id="monthlyHours" value="160" min="1" oninput="calc()">
+          </div>
+          <div class="field">
+            <label>ציוד עזר (₪/חודש)</label>
+            <input type="number" id="supplies" value="100" min="0" oninput="calc()">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFIT -->
+    <div class="section" id="sec-profit">
+      <div class="section-header" onclick="toggleSection('profit')">
+        <div class="section-icon icon-profit">💰</div>
+        <div>
+          <div class="section-title">מרווח רווח וכמות</div>
+          <div class="section-sub">לחישוב מחיר מכירה</div>
+        </div>
+        <span class="section-chevron">›</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>מרווח רווח (%)</label>
+          <div class="slider-wrap">
+            <input type="range" id="profitSlider" min="0" max="300" value="30" oninput="updateSlider(this,'profitVal','%');calc()">
+            <div class="slider-val" id="profitVal">30%</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>כמות יחידות</label>
+            <input type="number" id="quantity" value="1" min="1" oninput="calc()">
+          </div>
+          <div class="field">
+            <label>הנחת כמות (%)</label>
+            <input type="number" id="bulkDiscount" value="0" min="0" max="50" oninput="calc()">
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">כולל מע"מ 18%</div>
+            <div class="toggle-sub">הוסף מע"מ למחיר הסופי</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="includeVat" onchange="calc()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROJECT NAME -->
+    <div class="section" id="sec-project">
+      <div class="section-header" onclick="toggleSection('project')">
+        <div class="section-icon" style="background:linear-gradient(135deg,#607d8b,#37474f)">📝</div>
+        <div>
+          <div class="section-title">פרטי פרויקט</div>
+          <div class="section-sub">שם לשמירה בהיסטוריה</div>
+        </div>
+        <span class="section-chevron">›</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>שם הפרויקט</label>
+          <input type="text" id="projectName" placeholder="לדוגמה: תושבת טלפון, בית ציפור..." oninput="calc()">
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end tab-calc -->
+
+  <!-- CALC BUTTON -->
+  <div id="calcBtnWrap">
+    <button class="calc-btn" onclick="runCalc()">🧮 חשב עלות הדפסה</button>
+  </div>
+
+  <!-- RESULTS TAB -->
+  <div id="tab-results" class="tab-page">
+    <div class="section" style="margin-bottom:14px">
+      <div class="section-header" style="cursor:default">
+        <div class="section-icon" style="background:linear-gradient(135deg,#00d4ff,#7c5cbf)">📊</div>
+        <div>
+          <div class="section-title">פירוט עלויות</div>
+          <div class="section-sub">התפלגות מלאה</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="pie-chart-wrap">
+          <canvas id="pieChart" width="120" height="120"></canvas>
+          <div class="pie-chart-legend" id="pieLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header" style="cursor:default">
+        <div class="section-icon" style="background:linear-gradient(135deg,#00e676,#00897b)">💡</div>
+        <div>
+          <div class="section-title">ניתוח ורווחיות</div>
+        </div>
+      </div>
+      <div class="section-body" id="analysisSection"></div>
+    </div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div id="tab-history" class="tab-page">
+    <div id="historyList"></div>
+    <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="clearHistory()">🗑️ נקה היסטוריה</button>
+  </div>
+
+  <!-- RESULT STICKY PANEL -->
+  <div class="result-panel" id="resultPanel">
+    <div class="result-header">
+      <div class="result-title">עלות ייצור</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="badge" id="materialBadge">PLA</span>
+        <button class="result-close" onclick="closeResult()" title="סגור">✕</button>
+      </div>
+    </div>
+    <div class="result-main">
+      <div class="result-price"><span class="currency-sym">₪</span><span id="totalCostDisplay">0</span></div>
+      <div class="result-per" id="perUnitDisplay">לפריט אחד</div>
+    </div>
+    <div class="result-breakdown" id="breakdownRows"></div>
+    <div class="result-divider"></div>
+    <div style="padding:0 20px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">מחיר מכירה מומלץ</div>
+        <div style="font-size:22px;font-weight:900;color:var(--accent2)">₪<span id="sellingPriceDisplay">0</span></div>
+      </div>
+      <div style="text-align:left">
+        <div style="font-size:11px;color:var(--text-muted)">כולל מע"מ</div>
+        <div style="font-size:18px;font-weight:700;color:var(--text)" id="vatPriceDisplay">-</div>
+      </div>
+    </div>
+    <div class="result-actions">
+      <button class="btn btn-primary" onclick="saveToHistory()">💾 שמור</button>
+      <button class="btn btn-secondary" onclick="shareResult()">📤 שתף</button>
+    </div>
+  </div>
+
+</div><!-- end app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+let colorCount = 1;
+const colorDefaults = ['#ff5252','#448aff','#69f0ae','#ffeb3b'];
+const colorNames = ['צבע 1','צבע 2','צבע 3','צבע 4'];
+
+function setColorCount(n) {
+  colorCount = n;
+  document.querySelectorAll('.color-count-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('cc-' + n).classList.add('active');
+  renderColorRows();
+  updateColorCost();
+}
+
+function renderColorRows() {
+  const wrap = document.getElementById('colorRowsWrap');
+  wrap.innerHTML = '';
+  for (let i = 0; i < colorCount; i++) {
+    const isFirst = i === 0;
+    const row = document.createElement('div');
+    row.className = 'color-row';
+    row.innerHTML = `
+      <input type="color" class="color-swatch" id="swatch-${i}" value="${colorDefaults[i]}"
+        oninput="document.getElementById('swatch-${i}').style.background=this.value">
+      <div class="color-input-box">
+        <div class="color-name">${colorNames[i]}</div>
+        ${!isFirst ? `<span class="color-change-tag">החלפה +₪${calcOneChange()}</span>` : '<span style="font-size:11px;color:var(--text-muted)">ראשי</span>'}
+      </div>
+    `;
+    wrap.appendChild(row);
+    // set swatch bg
+    setTimeout(() => {
+      const sw = document.getElementById('swatch-' + i);
+      if (sw) sw.style.background = colorDefaults[i];
+    }, 0);
+  }
+  // update summary
+  const changes = colorCount - 1;
+  document.getElementById('color-summary').textContent =
+    colorCount === 1 ? 'צבע אחד (ברירת מחדל)' : `${colorCount} צבעים • ${changes} החלפ${changes > 1 ? 'ות' : 'ה'}`;
+  document.getElementById('colorCostBox').style.display = changes > 0 ? 'flex' : 'none';
+  updateColorCost();
+}
+
+function calcOneChange() {
+  const hourlyRate = v('hourlyRate') || 80;
+  return (2/60 * hourlyRate + 4).toFixed(1);
+}
+
+function updateColorCost() {
+  const changes = colorCount - 1;
+  if (changes <= 0) { document.getElementById('colorCostBox').style.display = 'none'; return; }
+  const hourlyRate = v('hourlyRate') || 80;
+  const laborPerChange = (2 / 60) * hourlyRate;
+  const calibPerChange = 4;
+  const totalColorCost = changes * (laborPerChange + calibPerChange);
+  document.getElementById('colorCostVal').textContent = '₪' + totalColorCost.toFixed(1);
+  document.getElementById('colorCostDetail').textContent =
+    `${changes} החלפ${changes > 1 ? 'ות' : 'ה'} × (₪${laborPerChange.toFixed(1)} עבודה + ₪4 כיול)`;
+  // re-render tags with updated price
+  document.querySelectorAll('.color-change-tag').forEach(tag => {
+    tag.textContent = `החלפה +₪${(laborPerChange + calibPerChange).toFixed(1)}`;
+  });
+}
+
+
+const materials = {
+  PLA:          { icon: '🟢', cost: 80,  color: '#4caf50' },
+  ABS:          { icon: '🟠', cost: 80,  color: '#ff9800' },
+  PETG:         { icon: '🔵', cost: 90,  color: '#2196f3' },
+  TPU:          { icon: '🌊', cost: 120, color: '#00bcd4' },
+  Nylon:        { icon: '⚪', cost: 140, color: '#9e9e9e' },
+  Resin:        { icon: '🟣', cost: 120, color: '#9c27b0' },
+  PEBA:         { icon: '⚡', cost: 180, color: '#ffd600' },
+  ASA:          { icon: '☀️', cost: 100, color: '#ff7043' },
+  PVA:          { icon: '💧', cost: 95,  color: '#26c6da' },
+  'PA CF':      { icon: '✨', cost: 150, color: '#ce93d8' },
+  'Wood':       { icon: '🪵', cost: 110, color: '#8d6e63' },
+  PC:           { icon: '🛡️', cost: 140, color: '#ef5350' },
+  Conductive:   { icon: '🔌', cost: 200, color: '#ffca28' },
+  'Metal Fill': { icon: '⚙️', cost: 160, color: '#90a4ae' },
+  'ESD-Safe':   { icon: '🔷', cost: 175, color: '#5c6bc0' },
+};
+
+let selectedMaterial = 'PLA';
+let lastResult = null;
+let history = JSON.parse(localStorage.getItem('print3dHistory') || '[]');
+
+const presets = {
+  small:  { weight: 50,  hours: 3,  prep: 20, post: 10 },
+  medium: { weight: 150, hours: 8,  prep: 30, post: 20 },
+  large:  { weight: 400, hours: 20, prep: 45, post: 40 },
+  proto:  { weight: 80,  hours: 5,  prep: 60, post: 30 },
+};
+
+function loadPreset(p) {
+  const d = presets[p];
+  v('printWeight', d.weight);
+  v('printHours', d.hours);
+  v('prepMinutes', d.prep);
+  document.getElementById('postProcessSlider').value = d.post;
+  updateSlider(document.getElementById('postProcessSlider'), 'postProcessVal', ' דק');
+  calc();
+  showToast('✅ פרויקט נטען בהצלחה');
+}
+
+function v(id, val) {
+  if (val !== undefined) document.getElementById(id).value = val;
+  else return parseFloat(document.getElementById(id).value) || 0;
+}
+
+function selectMaterial(mat) {
+  selectedMaterial = mat;
+  document.querySelectorAll('.mat-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('mat-' + mat).classList.add('selected');
+  document.getElementById('materialCost').value = materials[mat].cost;
+  document.getElementById('materialBadge').textContent = mat;
+  document.getElementById('mat-summary').textContent = mat + ' • ₪' + materials[mat].cost + '/ק"ג';
+  calc();
+}
+
+function toggleSection(name) {
+  const sec = document.getElementById('sec-' + name);
+  sec.classList.toggle('collapsed');
+}
+
+function updateSlider(el, labelId, suffix) {
+  document.getElementById(labelId).textContent = el.value + suffix;
+}
+
+function calc() {
+  // Material
+  const costPerKg = v('materialCost');
+  const weightGram = v('printWeight');
+  const wastePct = parseFloat(document.getElementById('wasteSlider').value) / 100;
+  const totalWeightGram = weightGram * (1 + wastePct);
+  const matCost = (totalWeightGram / 1000) * costPerKg;
+
+  // Printer depreciation
+  const printerCost = v('printerCost');
+  const printerLife = v('printerLife') * 8760;  // convert years to hours
+  const printerDepHour = printerLife > 0 ? printerCost / printerLife : 0;
+  const printHours = v('printHours');
+  const printerDep = printerDepHour * printHours;
+
+  // Maintenance
+  const maintenanceYear = v('maintenance');
+  const hoursYear = v('printerHoursYear') || 1;
+  const maintCostHour = maintenanceYear / hoursYear;
+  const maintCost = maintCostHour * printHours;
+
+  // Electricity
+  const watt = v('wattage');
+  const rate = v('electricRate');
+  const elecCost = (watt / 1000) * printHours * rate;
+
+  // Labor
+  const hourlyRate = v('hourlyRate');
+  const supervMin = v('supervisionMin');
+  const postMin = parseFloat(document.getElementById('postProcessSlider').value);
+  let prepMin = 0;
+  if (document.getElementById('includePrep').checked) {
+    prepMin = v('prepMinutes');
+  }
+  const laborCost = ((supervMin + postMin + prepMin) / 60) * hourlyRate;
+
+  // Painting
+  let paintCost = 0;
+  if (document.getElementById('includePainting').checked) {
+    paintCost = v('paintingCost');
+  }
+
+  // Color changes
+  const colorChanges = colorCount - 1;
+  const colorLaborCost = colorChanges * (2 / 60) * hourlyRate;
+  const colorCalibCost = colorChanges * 4;
+  const colorTotalCost = colorLaborCost + colorCalibCost;
+  updateColorCost();
+
+  // Overhead
+  const rent = v('rent');
+  const insurance = v('insurance');
+  const supplies = v('supplies');
+  const monthlyHours = v('monthlyHours') || 160;
+  const overheadHour = (rent + insurance + supplies) / monthlyHours;
+  const overheadCost = overheadHour * printHours;
+
+  // Total cost
+  const totalCost = matCost + printerDep + maintCost + elecCost + laborCost + paintCost + colorTotalCost + overheadCost;
+
+  // Quantity
+  const qty = parseInt(v('quantity')) || 1;
+  const bulkDiscount = Math.min(v('bulkDiscount'), 50) / 100;
+  const discountedCost = totalCost * (1 - bulkDiscount);
+  const totalAllUnits = discountedCost * qty;
+
+  // Selling price
+  const profitPct = parseFloat(document.getElementById('profitSlider').value) / 100;
+  const sellingPrice = discountedCost * (1 + profitPct);
+  const vatPrice = document.getElementById('includeVat').checked ? sellingPrice * 1.18 : null;
+
+  lastResult = {
+    matCost, printerDep, maintCost, elecCost, laborCost, paintCost, colorTotalCost, overheadCost,
+    totalCost, discountedCost, totalAllUnits, sellingPrice, vatPrice, qty
+  };
+
+  // Update display
+  document.getElementById('totalCostDisplay').textContent = fmt(discountedCost);
+  document.getElementById('perUnitDisplay').textContent = qty > 1 ? `לפריט אחד (סה"כ ${qty} פריטים: ₪${fmt(totalAllUnits)})` : 'לפריט אחד';
+  document.getElementById('sellingPriceDisplay').textContent = fmt(sellingPrice);
+  document.getElementById('vatPriceDisplay').textContent = vatPrice ? '₪' + fmt(vatPrice) : 'לא נכלל';
+
+  // Breakdown rows
+  const parts = [
+    { label: 'חומר גלם', val: matCost, color: '#ff6b35' },
+    { label: 'בלאי מדפסת', val: printerDep + maintCost, color: '#00d4ff' },
+    { label: 'חשמל', val: elecCost, color: '#ffb300' },
+    { label: 'כוח אדם', val: laborCost + paintCost, color: '#00e676' },
+    { label: 'החלפות צבע', val: colorTotalCost, color: '#e91e63' },
+    { label: 'תקורה', val: overheadCost, color: '#7c5cbf' },
+  ].filter(p => p.val > 0.001);
+
+  const rows = document.getElementById('breakdownRows');
+  rows.innerHTML = parts.map(p => `
+    <div class="breakdown-item">
+      <div class="breakdown-label">
+        <div class="breakdown-dot" style="background:${p.color}"></div>
+        ${p.label}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="breakdown-pct">${totalCost > 0 ? Math.round(p.val/totalCost*100) : 0}%</span>
+        <span class="breakdown-value">₪${fmt(p.val)}</span>
+      </div>
+    </div>
+  `).join('');
+
+  // Update pie + analysis if on results tab
+  updateResultsTab(parts, totalCost, discountedCost, sellingPrice, vatPrice);
+}
+
+function updateResultsTab(parts, totalCost, discountedCost, sellingPrice, vatPrice) {
+  // Pie
+  const canvas = document.getElementById('pieChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const total = parts.reduce((s, p) => s + p.val, 0) || 1;
+  ctx.clearRect(0, 0, 120, 120);
+  let angle = -Math.PI / 2;
+  parts.forEach(p => {
+    const slice = (p.val / total) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(60, 60);
+    ctx.arc(60, 60, 54, angle, angle + slice);
+    ctx.fillStyle = p.color;
+    ctx.fill();
+    angle += slice;
+  });
+  // Center hole
+  ctx.beginPath();
+  ctx.arc(60, 60, 32, 0, 2 * Math.PI);
+  ctx.fillStyle = '#161922';
+  ctx.fill();
+
+  // Legend
+  document.getElementById('pieLegend').innerHTML = parts.map(p => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${p.color}"></div>
+      ${p.label}
+      <span class="legend-val">₪${fmt(p.val)}</span>
+    </div>
+  `).join('');
+
+  // Analysis
+  const profit = sellingPrice - discountedCost;
+  const marginPct = discountedCost > 0 ? Math.round(profit / sellingPrice * 100) : 0;
+  const breakEvenQty = sellingPrice > discountedCost ? Math.ceil(100 * discountedCost / profit) : 0;
+
+  document.getElementById('analysisSection').innerHTML = `
+    <div class="breakdown-item" style="background:rgba(0,230,118,0.06);border-color:rgba(0,230,118,0.2)">
+      <div class="breakdown-label">💰 רווח גולמי ליחידה</div>
+      <div class="breakdown-value" style="color:var(--success)">₪${fmt(profit)}</div>
+    </div>
+    <div class="breakdown-item">
+      <div class="breakdown-label">📈 מרווח רווח אמיתי</div>
+      <div class="breakdown-value">${marginPct}%</div>
+    </div>
+    <div class="breakdown-item">
+      <div class="breakdown-label">⚖️ נקודת איזון (100 יחידות)</div>
+      <div class="breakdown-value">${breakEvenQty > 0 ? breakEvenQty + ' יח\'': 'לא רלוונטי'}</div>
+    </div>
+    ${vatPrice ? `<div class="breakdown-item" style="background:rgba(124,92,191,0.06);border-color:rgba(124,92,191,0.2)">
+      <div class="breakdown-label">🧾 מחיר כולל מע"מ</div>
+      <div class="breakdown-value" style="color:#b39ddb">₪${fmt(vatPrice)}</div>
+    </div>` : ''}
+    <div style="padding:10px 12px;background:rgba(255,107,53,0.06);border-radius:8px;border:1px solid rgba(255,107,53,0.15)">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:700">💡 המלצות</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.7">
+        ${discountedCost < 5 ? '✅ עלות נמוכה מאוד — מתאים לייצור סדרתי.' : ''}
+        ${marginPct < 20 ? '⚠️ מרווח רווח נמוך — שקול להעלות מחיר.' : ''}
+        ${marginPct >= 40 ? '🚀 מרווח גבוה — תמחור תחרותי טוב.' : ''}
+        ${lastResult?.elecCost > lastResult?.matCost ? '⚡ עלות החשמל גבוהה יחסית — שקול לייעל זמן הדפסה.' : ''}
+        ${lastResult?.laborCost > lastResult?.totalCost * 0.4 ? '👷 עלות כוח האדם דומיננטית — שקול אוטומציה.' : ''}
+      </div>
+    </div>
+  `;
+}
+
+function fmt(n) {
+  return n < 10 ? n.toFixed(2) : Math.round(n).toLocaleString('he-IL');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab')[['calc','results','history'].indexOf(tab)].classList.add('active');
+  if (tab === 'results') {
+    setTimeout(() => {
+      if (lastResult) {
+        const parts = [
+          { label: 'חומר גלם', val: lastResult.matCost, color: '#ff6b35' },
+          { label: 'בלאי מדפסת', val: lastResult.printerDep + lastResult.maintCost, color: '#00d4ff' },
+          { label: 'חשמל', val: lastResult.elecCost, color: '#ffb300' },
+          { label: 'כוח אדם', val: lastResult.laborCost + lastResult.paintCost, color: '#00e676' },
+          { label: 'תקורה', val: lastResult.overheadCost, color: '#7c5cbf' },
+        ].filter(p => p.val > 0.001);
+        updateResultsTab(parts, lastResult.totalCost, lastResult.discountedCost, lastResult.sellingPrice, lastResult.vatPrice);
+      }
+    }, 100);
+  }
+  if (tab === 'history') renderHistory();
+}
+
+function saveToHistory() {
+  if (!lastResult) return;
+  const name = document.getElementById('projectName').value || 'פרויקט ללא שם';
+  const entry = {
+    id: Date.now(),
+    name,
+    material: selectedMaterial,
+    cost: lastResult.discountedCost,
+    selling: lastResult.sellingPrice,
+    date: new Date().toLocaleDateString('he-IL'),
+    weight: v('printWeight'),
+    hours: v('printHours'),
+  };
+  history.unshift(entry);
+  if (history.length > 50) history = history.slice(0, 50);
+  localStorage.setItem('print3dHistory', JSON.stringify(history));
+  showToast('✅ נשמר בהיסטוריה');
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (history.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div>אין פרויקטים שמורים עדיין</div>`;
+    return;
+  }
+  list.innerHTML = history.map(e => `
+    <div class="history-item" onclick="loadFromHistory(${e.id})">
+      <div class="history-icon">${materials[e.material]?.icon || '🖨️'}</div>
+      <div class="history-info">
+        <div class="history-name">${e.name}</div>
+        <div class="history-meta">${e.material} · ${e.weight}ג' · ${e.hours}ש' · ${e.date}</div>
+      </div>
+      <div class="history-price">₪${fmt(e.cost)}</div>
+    </div>
+  `).join('');
+}
+
+function loadFromHistory(id) {
+  showToast('📂 פרויקט נטען');
+  switchTab('calc');
+}
+
+function clearHistory() {
+  if (!confirm('למחוק את כל ההיסטוריה?')) return;
+  history = [];
+  localStorage.removeItem('print3dHistory');
+  renderHistory();
+}
+
+function shareResult() {
+  if (!lastResult) return;
+  const name = document.getElementById('projectName').value || 'פרויקט';
+  const text = `📊 עלויות הדפסה תלת מימד - ${name}\n🧱 חומר: ${selectedMaterial}\n💰 עלות ייצור: ₪${fmt(lastResult.discountedCost)}\n💵 מחיר מכירה: ₪${fmt(lastResult.sellingPrice)}`;
+  if (navigator.share) {
+    navigator.share({ title: 'מחשבון הדפסה 3D', text });
+  } else {
+    navigator.clipboard.writeText(text).then(() => showToast('📋 הועתק ללוח'));
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Painting toggle
+document.getElementById('includePainting').addEventListener('change', function() {
+  document.getElementById('paintingCostWrap').style.display = this.checked ? 'flex' : 'none';
+});
+document.getElementById('includePrep').addEventListener('change', function() {
+  document.getElementById('prepTimeWrap').style.display = this.checked ? 'flex' : 'none';
+});
+
+// Init colors
+renderColorRows();
+
+function runCalc() {
+  calc();
+  document.getElementById('resultPanel').classList.add('visible');
+  setTimeout(() => {
+    document.getElementById('resultPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+
+function closeResult() {
+  document.getElementById('resultPanel').classList.remove('visible');
+}
+
+
+</script>
+</body>
+</html>
